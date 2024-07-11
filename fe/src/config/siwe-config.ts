@@ -10,6 +10,8 @@ import {
   createSIWEConfig,
 } from "@web3modal/siwe";
 
+const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
+
 async function getMessageParams() {
   return {
     domain: window.location.host,
@@ -21,7 +23,7 @@ async function getMessageParams() {
 
 async function getSession(): Promise<SIWESession | null> {
   try {
-    const response = await fetch("http://localhost:8000/api/session", {
+    const response = await fetch(`${API_URL}/api/session`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -60,7 +62,7 @@ async function verifyMessage({ message, signature }: SIWEVerifyMessageArgs) {
     const chainId = getChainIdFromMessage(message);
     const address = getAddressFromMessage(message);
 
-    const response = await fetch("http://localhost:8000/api/verify", {
+    const response = await fetch(`${API_URL}/api/verify`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -88,7 +90,7 @@ async function verifyMessage({ message, signature }: SIWEVerifyMessageArgs) {
 
 async function getNonce() {
   try {
-    const response = await fetch("http://localhost:8000/api/nonce", {
+    const response = await fetch(`${API_URL}/api/nonce`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -120,7 +122,7 @@ async function signOut() {
 export async function onSignOut() {
   console.log("what");
   try {
-    const response = await fetch("http://localhost:8000/api/session", {
+    const response = await fetch(`${API_URL}/api/session`, {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
