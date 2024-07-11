@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@hapi/hapi": "^21.3.10",
+    "@hapi/jwt": "^3.2.0",
     "siwe": "^2.3.2"
   },
   "devDependencies": {
