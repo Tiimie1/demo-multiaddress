@@ -14,7 +14,7 @@ async function getMessageParams() {
   return {
     domain: window.location.host,
     uri: window.location.origin,
-    chains: [11155111],
+    chains: [11155111, 80002],
     statement: "Please sign with your account",
   };
 }
@@ -26,8 +26,10 @@ async function getSession(): Promise<SIWESession | null> {
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     });
     if (!response.ok) {
+      console.log("Failed to get SIWESession");
       throw new Error("Failed to get SIWESession");
     }
     const data = await response.json();
@@ -69,6 +71,7 @@ async function verifyMessage({ message, signature }: SIWEVerifyMessageArgs) {
         chainId: chainId,
         address: address,
       }),
+      credentials: "include",
     });
 
     if (!response.ok) {
@@ -76,7 +79,6 @@ async function verifyMessage({ message, signature }: SIWEVerifyMessageArgs) {
     }
     const data = await response.json();
     const { success } = data;
-    console.log("verifying was:", success);
     return success;
   } catch (error) {
     console.error("Error verifying signature:", error);
@@ -96,7 +98,6 @@ async function getNonce() {
     if (!response.ok) {
       throw new Error("Failed to get JWT token!");
     }
-
     const data = await response.json();
     const { nonce } = data;
     return nonce;
@@ -117,14 +118,17 @@ async function signOut() {
 }
 
 export async function onSignOut() {
+  console.log("what");
   try {
     const response = await fetch("http://localhost:8000/api/session", {
       method: "DELETE",
       headers: {
         "Content-Type": "application/json",
       },
+      credentials: "include",
     });
     if (!response.ok) {
+      console.log("I could not sign out");
       throw new Error("Failed to destroy session!");
     }
     console.log("I signed out");

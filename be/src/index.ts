@@ -2,8 +2,7 @@
 
 import Hapi from "@hapi/hapi";
 import { generateNonce, SiweMessage } from "siwe";
-
-let temporaryStorage: { address?: string; chainId?: number } = {};
+import { configureAuth, create } from "./utils/auth";
 
 const init = async () => {
   const server = Hapi.server({
@@ -21,11 +20,16 @@ const init = async () => {
     },
   });
 
+  await configureAuth(server);
+
   server.route({
     method: "GET",
     path: "/",
     handler: (request, h) => {
       return "Hello World!";
+    },
+    options: {
+      auth: "jwt_strategy",
     },
   });
 
@@ -33,14 +37,14 @@ const init = async () => {
     method: "GET",
     path: "/api/session",
     handler: (request: Hapi.Request, h: Hapi.ResponseToolkit) => {
-      if (temporaryStorage.address && temporaryStorage.chainId) {
-        return {
-          address: temporaryStorage.address,
-          chainId: temporaryStorage.chainId,
-        };
-      } else {
+      try {
+        return request.auth.credentials;
+      } catch {
         return null;
       }
+    },
+    options: {
+      auth: "jwt_strategy",
     },
   });
 
@@ -48,7 +52,13 @@ const init = async () => {
     method: "DELETE",
     path: "/api/session",
     handler: (request: Hapi.Request, h: Hapi.ResponseToolkit) => {
-      temporaryStorage = {};
+      h.unstate("token", {
+        isHttpOnly: true,
+        isSecure: false,
+        clearInvalid: true,
+        path: "/",
+        isSameSite: "Strict",
+      });
       return { message: "Stored data cleared successfully" };
     },
   });
@@ -66,9 +76,15 @@ const init = async () => {
       const siweMessage = new SiweMessage(message);
       try {
         await siweMessage.verify({ signature });
-        temporaryStorage = { address, chainId };
+        const token = create(address, chainId);
 
-        return { success: true };
+        return h.response({ success: true }).state("token", token, {
+          isHttpOnly: true,
+          isSecure: false,
+          clearInvalid: true,
+          path: "/",
+          isSameSite: "Strict",
+        });
       } catch {
         return { success: false };
       }

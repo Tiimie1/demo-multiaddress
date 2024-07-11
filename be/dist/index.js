@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const hapi_1 = __importDefault(require("@hapi/hapi"));
 const siwe_1 = require("siwe");
-let temporaryStorage = {};
+const auth_1 = require("./utils/auth");
 const init = () => __awaiter(void 0, void 0, void 0, function* () {
     const server = hapi_1.default.server({
         port: 8000,
@@ -30,33 +30,43 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
             },
         },
     });
+    yield (0, auth_1.configureAuth)(server);
     server.route({
         method: "GET",
         path: "/",
         handler: (request, h) => {
             return "Hello World!";
         },
+        options: {
+            auth: "jwt_strategy",
+        },
     });
     server.route({
         method: "GET",
         path: "/api/session",
         handler: (request, h) => {
-            if (temporaryStorage.address && temporaryStorage.chainId) {
-                return {
-                    address: temporaryStorage.address,
-                    chainId: temporaryStorage.chainId,
-                };
+            try {
+                return request.auth.credentials;
             }
-            else {
+            catch (_a) {
                 return null;
             }
+        },
+        options: {
+            auth: "jwt_strategy",
         },
     });
     server.route({
         method: "DELETE",
         path: "/api/session",
         handler: (request, h) => {
-            temporaryStorage = {};
+            h.unstate("token", {
+                isHttpOnly: true,
+                isSecure: false,
+                clearInvalid: true,
+                path: "/",
+                isSameSite: "Strict",
+            });
             return { message: "Stored data cleared successfully" };
         },
     });
@@ -68,8 +78,14 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
             const siweMessage = new siwe_1.SiweMessage(message);
             try {
                 yield siweMessage.verify({ signature });
-                temporaryStorage = { address, chainId };
-                return { success: true };
+                const token = (0, auth_1.create)(address, chainId);
+                return h.response({ success: true }).state("token", token, {
+                    isHttpOnly: true,
+                    isSecure: false,
+                    clearInvalid: true,
+                    path: "/",
+                    isSameSite: "Strict",
+                });
             }
             catch (_a) {
                 return { success: false };
