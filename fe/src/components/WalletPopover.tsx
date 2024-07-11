@@ -40,6 +40,10 @@ const WalletPopover: React.FC<WalletPopoverProps> = ({
 }) => {
   const [tooltipTitle, setTooltipTitle] = useState(address || "");
 
+  useEffect(() => {
+    setTooltipTitle(address);
+  }, [address]);
+
   const handleAddressClick = (address: string) => {
     navigator.clipboard.writeText(address || "");
     setTooltipTitle("Copied!");
