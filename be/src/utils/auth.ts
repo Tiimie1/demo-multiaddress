@@ -1,14 +1,21 @@
 import { Server } from "@hapi/hapi";
 import Jwt from "@hapi/jwt";
+import { getUsersByAddress } from "../api/getUserByAddress.js";
 
-export const create = (address: string, chainId: number) => {
+export const create = async (address: string, chainId: number) => {
+  let role = await getUsersByAddress(address);
+
+  if (!role) {
+    role = "user";
+  }
+
   return Jwt.token.generate(
     {
       address: address,
       chainId: chainId,
       iss: "api-dev.defactor.dev",
       "https://hasura.io/jwt/claims": {
-        "x-hasura-default-role": "user",
+        "x-hasura-default-role": role,
         "x-hasura-allowed-roles": ["user", "admin"],
       },
     },

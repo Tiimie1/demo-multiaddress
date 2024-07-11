@@ -2,7 +2,8 @@
 
 import Hapi from "@hapi/hapi";
 import { generateNonce, SiweMessage } from "siwe";
-import { configureAuth, create } from "./utils/auth";
+import { configureAuth, create } from "./utils/auth.js";
+import { getUsersByAddress } from "./api/getUserByAddress.js";
 
 const init = async () => {
   const server = Hapi.server({
@@ -30,6 +31,21 @@ const init = async () => {
     },
     options: {
       auth: "jwt_strategy",
+    },
+  });
+
+  server.route({
+    method: "POST",
+    path: "/usr",
+    handler: async (request, h) => {
+      try {
+        const { address } = request.payload as { address: string };
+        const usr = getUsersByAddress(address);
+        return usr;
+      } catch (error) {
+        console.error(error);
+        return h.response({ error: "Internal Server Error" }).code(500);
+      }
     },
   });
 
@@ -76,7 +92,7 @@ const init = async () => {
       const siweMessage = new SiweMessage(message);
       try {
         await siweMessage.verify({ signature });
-        const token = create(address, chainId);
+        const token = await create(address, chainId);
 
         return h.response({ success: true }).state("token", token, {
           isHttpOnly: true,

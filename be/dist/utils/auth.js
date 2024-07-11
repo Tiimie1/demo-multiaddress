@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,19 +7,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.configureAuth = exports.create = void 0;
-const jwt_1 = __importDefault(require("@hapi/jwt"));
-const create = (address, chainId) => {
-    return jwt_1.default.token.generate({
+import Jwt from "@hapi/jwt";
+import { getUsersByAddress } from "../api/getUserByAddress.js";
+export const create = (address, chainId) => __awaiter(void 0, void 0, void 0, function* () {
+    let role = yield getUsersByAddress(address);
+    if (!role) {
+        role = "user";
+    }
+    return Jwt.token.generate({
         address: address,
         chainId: chainId,
         iss: "api-dev.defactor.dev",
         "https://hasura.io/jwt/claims": {
-            "x-hasura-default-role": "user",
+            "x-hasura-default-role": role,
             "x-hasura-allowed-roles": ["user", "admin"],
         },
     }, {
@@ -30,10 +29,9 @@ const create = (address, chainId) => {
         ttlSec: 14400, //4h
         iat: true,
     });
-};
-exports.create = create;
-const configureAuth = (server) => __awaiter(void 0, void 0, void 0, function* () {
-    yield server.register(jwt_1.default);
+});
+export const configureAuth = (server) => __awaiter(void 0, void 0, void 0, function* () {
+    yield server.register(Jwt);
     server.auth.strategy("jwt_strategy", "jwt", {
         cookieName: "token",
         keys: "some-very-secret-key",
@@ -60,4 +58,3 @@ const configureAuth = (server) => __awaiter(void 0, void 0, void 0, function* ()
         }),
     });
 });
-exports.configureAuth = configureAuth;

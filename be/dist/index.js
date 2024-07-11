@@ -8,17 +8,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", { value: true });
-const hapi_1 = __importDefault(require("@hapi/hapi"));
-const siwe_1 = require("siwe");
-const auth_1 = require("./utils/auth");
+import Hapi from "@hapi/hapi";
+import { generateNonce, SiweMessage } from "siwe";
+import { configureAuth, create } from "./utils/auth.js";
+import { getUsersByAddress } from "./api/getUserByAddress.js";
 const init = () => __awaiter(void 0, void 0, void 0, function* () {
-    const server = hapi_1.default.server({
+    const server = Hapi.server({
         port: 8000,
-        host: "localhost",
+        host: "0.0.0.0",
         routes: {
             cors: {
                 origin: ["*"],
@@ -30,7 +27,7 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
             },
         },
     });
-    yield (0, auth_1.configureAuth)(server);
+    yield configureAuth(server);
     server.route({
         method: "GET",
         path: "/",
@@ -40,6 +37,21 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
         options: {
             auth: "jwt_strategy",
         },
+    });
+    server.route({
+        method: "POST",
+        path: "/usr",
+        handler: (request, h) => __awaiter(void 0, void 0, void 0, function* () {
+            try {
+                const { address } = request.payload;
+                const usr = getUsersByAddress(address);
+                return usr;
+            }
+            catch (error) {
+                console.error(error);
+                return h.response({ error: "Internal Server Error" }).code(500);
+            }
+        }),
     });
     server.route({
         method: "GET",
@@ -75,10 +87,10 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
         path: "/api/verify",
         handler: (request, h) => __awaiter(void 0, void 0, void 0, function* () {
             const { message, signature, address, chainId } = request.payload;
-            const siweMessage = new siwe_1.SiweMessage(message);
+            const siweMessage = new SiweMessage(message);
             try {
                 yield siweMessage.verify({ signature });
-                const token = (0, auth_1.create)(address, chainId);
+                const token = yield create(address, chainId);
                 return h.response({ success: true }).state("token", token, {
                     isHttpOnly: true,
                     isSecure: false,
@@ -96,7 +108,7 @@ const init = () => __awaiter(void 0, void 0, void 0, function* () {
         method: "GET",
         path: "/api/nonce",
         handler: (request, h) => {
-            const nonce = (0, siwe_1.generateNonce)();
+            const nonce = generateNonce();
             return { nonce };
         },
     });
